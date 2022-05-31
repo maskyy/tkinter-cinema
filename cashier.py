@@ -18,11 +18,27 @@ class Cashier(Window):
     def __init__(self):
         super().__init__("Касса")
         self.db = Database()
-        return
         self.create_widgets()
 
     def create_widgets(self):
         logo.get_label(self).pack()
+        tabs = Tabs(self)
+        tabs.populate(
+            {
+                self.create_main: "Продажа",
+                self.create_returns: "Возврат",
+            }
+        )
+
+    def create_main(self, master):
+        frame = _ttk.Frame(master)
+        return frame
+
+    def create_returns(self, master):
+        frame = _ttk.Frame(master)
+        return frame
+
+    def create_widgets_old(self):
         main = _ttk.Frame(self)
         main.pack(expand=True, fill="both", pady=20)
         main.grid_columnconfigure(0, weight=2)
@@ -62,12 +78,6 @@ class Cashier(Window):
         self.sum_label.pack(pady=5)
         Button(check_frame, text="Продать", command=self.on_sell).pack(pady=5)
         Button(check_frame, text="Вернуть", command=self.on_return).pack(pady=5)
-        Hint(
-            check_frame,
-            hint="""Чтобы реализовать товары, необходимо нажать на кнопку "Продать".
-Чек должен содержать хотя бы один товар.
-Чтобы отменить реализацию товаров, нужно выбрать товары для отмены, нажать кнопку "Вернуть" и ввести логин и пароль администратора.""",
-        ).pack(pady=5)
 
     def create_entries(self, master):
         _ttk.Label(master, text="Штрихкод").grid(column=0, row=0, padx=5)
@@ -80,13 +90,6 @@ class Cashier(Window):
 
         self.add = Button(master, text="Добавить", command=self.on_add_item)
         self.add.grid(column=0, row=2, columnspan=2, pady=5)
-
-        Hint(
-            master,
-            hint="""Чтобы выбрать товар, нужно нажать на него в таблице товаров либо ввести штрихкод.
-Количество товаров должно быть не менее 1 и не более, чем есть товаров в наличии.
-Кнопка "Добавить" добавляет товар в чек.""",
-        ).grid(column=2, row=0, rowspan=2)
 
         self.code.bind("<Return>", lambda _: self.add.invoke())
         self.amount.bind("<Return>", lambda _: self.add.invoke())
@@ -203,11 +206,3 @@ class Cashier(Window):
             result += self.check.item(row)["values"][2]
         self.check_sum = result
         self.sum_label.config(text="Сумма: %d" % self.check_sum)
-
-
-if __name__ == "__main__":
-    root = _tk.Tk()
-    root.withdraw()
-    cashier = Cashier()
-    util.set_close_handler(cashier, root.destroy)
-    cashier.mainloop()

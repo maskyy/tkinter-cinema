@@ -5,7 +5,7 @@ __all__ = ["Database"]
 _default_name = "files/cinema.sqlite3"
 
 _init_script = """
-PRAGMA encoding = 'UTF-8';
+PRAGMA encoding = "UTF-8";
 PRAGMA foreign_keys = 1;
 
 PRAGMA journal_mode = WAL;
@@ -62,11 +62,6 @@ PRAGMA optimize;
 """
 
 
-def _check_args(length, *args):
-    if length != len(*args):
-        raise Exception("Wrong number of arguments")
-
-
 class Database:
     def __init__(self, filename=_default_name):
         self.con = _sql.connect(filename)
@@ -88,6 +83,10 @@ class Database:
     def execute(self, *args):
         return self._cur.execute(*args)
 
+    def get_columns(self, table):
+        self._cur.execute("SELECT name FROM PRAGMA_TABLE_INFO('%s')" % table)
+        return [name[0] for name in self._cur.fetchall()]
+
     def get_user(self, login):
         self._cur.execute("SELECT password, role FROM logins WHERE login = ?", (login,))
         result = self._cur.fetchone()
@@ -98,10 +97,12 @@ class Database:
             "INSERT INTO logins VALUES (?, ?, ?)", (login, password, role)
         )
 
-    def get_columns(self, table):
-        self._cur.execute("SELECT name FROM PRAGMA_TABLE_INFO('%s')" % table)
-        return [name[0] for name in self._cur.fetchall()]
+    def get_new_check_id(self):
+        result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
+        return 1 if not result else result
 
+
+"""
     def add_product(self, *args):
         _check_args(5, args)
         self._cur.execute("INSERT INTO goods VALUES (?, ?, ?, ?, ?)", args)
@@ -130,34 +131,16 @@ class Database:
             "UPDATE goods SET amount = ? WHERE barcode = ?", (new, barcode)
         )
 
-    def get_new_check_id(self):
-        result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
-        return 1 if not result else result
-
     def add_check(self, id_, sum_):
         self._cur.execute("INSERT INTO checks VALUES (?, ?)", (id_, sum_))
 
     def sell_product(self, check_id, barcode, amount, cost):
-        """
-        count = self._cur.execute(
-            "SELECT amount FROM goods WHERE barcode = ?", (barcode,)
-        ).fetchone()[0]
-        new_amount = count - amount
-        self._cur.execute(
-            "UPDATE goods SET amount = ? WHERE barcode = ?", (new_amount, barcode)
-        )
-        """
         self.change_by_amount(barcode, -amount)
 
         self._cur.execute(
             "INSERT INTO sales VALUES (NULL, ?, ?, ?, ?)",
             (check_id, barcode, amount, cost),
         )
-        """
-        self._cur.execute(
-            "UPDATE checks SET sum = sum + ? WHERE id = ?", (cost, check_id)
-        )
-        """
 
     def return_check(self, check_id):
         self._cur.execute("DELETE FROM checks WHERE id = ?", (check_id,))
@@ -181,3 +164,4 @@ class Database:
 
     def reset_sales(self):
         self._cur.executescript("DELETE FROM sales; DELETE FROM checks;")
+"""
