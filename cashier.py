@@ -17,38 +17,37 @@ __all__ = ["Cashier"]
 class Cashier(Window):
     def __init__(self):
         super().__init__("Касса")
-        self.db = Database()
-        self.create_widgets()
+        self._db = Database()
+        self._create_widgets()
 
-    def create_widgets(self):
+    def _create_widgets(self):
         logo.get_label(self).pack()
         tabs = Tabs(self)
         tabs.populate(
             {
-                self.create_main: "Продажа",
-                self.create_returns: "Возврат",
+                self._create_main: "Продажа",
+                self._create_returns: "Возврат",
             }
         )
 
-    def create_main(self, master):
+    def _create_main(self, master):
         frame = _ttk.Frame(master)
+        frame.grid_columnconfigure(0, weight=2)
+        frame.grid_columnconfigure(1, weight=1)
+        frame.grid_rowconfigure(1, weight=1)
+
+        _ttk.Label(frame, text="Билеты").grid(column=0, row=0)
+        self._check_text = _ttk.Label(frame)
+        self._check_text.grid(column=1, row=0)
+        self._update_check_id()
+
         return frame
 
-    def create_returns(self, master):
+    def _create_returns(self, master):
         frame = _ttk.Frame(master)
         return frame
 
     def create_widgets_old(self):
-        main = _ttk.Frame(self)
-        main.pack(expand=True, fill="both", pady=20)
-        main.grid_columnconfigure(0, weight=2)
-        main.grid_columnconfigure(1, weight=1)
-        main.grid_rowconfigure(1, weight=1)
-
-        _ttk.Label(main, text="Товары").grid(column=0, row=0)
-        self.check_text = _ttk.Label(main)
-        self.check_text.grid(column=1, row=0)
-        self.update_check_id()
 
         goods_cols = [
             "Штрихкод",
@@ -196,9 +195,9 @@ class Cashier(Window):
 
         self.update_check_sum()
 
-    def update_check_id(self):
-        self.check_id = self.db.get_new_check_id()
-        self.check_text.config(text="Чек №%d" % self.check_id)
+    def _update_check_id(self):
+        self._check_id = self._db.get_new_check_id()
+        self._check_text.config(text="Чек №%d" % self._check_id)
 
     def update_check_sum(self):
         result = 0

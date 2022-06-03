@@ -100,8 +100,27 @@ class Database:
     def get_new_check_id(self):
         result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
         return 1 if not result else result
+    
+    def sell_product(self):
+        pass
 
+    def add_check(self):
+        pass
 
+    def return_check(self):
+        pass
+    
+    def return_product(self):
+        pass
+
+    def add_film(self):
+        pass
+
+    def add_show(self):
+        pass
+
+    def get_film_stats(self):
+        pass
 """
     def add_product(self, *args):
         _check_args(5, args)

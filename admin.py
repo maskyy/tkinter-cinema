@@ -24,8 +24,8 @@ class DeliveryActions(_enum.Enum):
 class Admin(Window):
     def __init__(self):
         super().__init__("Панель администратора")
-        self.db = Database()
-        self.goods_cols = [
+        self._db = Database()
+        self._goods_cols = [
             "Штрихкод",
             "Наименование",
             "Производитель",
@@ -33,27 +33,28 @@ class Admin(Window):
             "Цена",
         ]
 
-        self.create_widgets()
+        self._create_widgets()
 
-    def create_widgets(self):
+    def _create_widgets(self):
         logo.get_label(self).pack()
         tabs = Tabs(self)
         tabs.populate(
             {
-                self.create_films: "Фильмы и сеансы",
-                self.create_stats: "Статистика",
-                self.create_logins: "Кассиры",
+                self._create_films: "Фильмы и сеансы",
+                self._create_stats: "Статистика",
+                self._create_logins: "Кассиры",
             }
         )
 
-    def create_films(self, master):
+    def _create_films(self, master):
+        frame = _ttk.Frame(master)
+
+        return frame
+
+    def _create_logins(self, master):
         frame = _ttk.Frame(master)
         return frame
 
-    def create_logins(self, master):
-        frame = _ttk.Frame(master)
-        return frame
-
-    def create_stats(self, master):
+    def _create_stats(self, master):
         frame = _ttk.Frame(master)
         return frame
