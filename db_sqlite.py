@@ -16,21 +16,22 @@ CREATE TABLE IF NOT EXISTS films (
     name TEXT NOT NULL UNIQUE,
     year INTEGER NOT NULL,
     duration_min INTEGER NOT NULL CHECK(duration_min >= 0),
-    description TEXT NOT NULL
+    description TEXT NOT NULL,
+    image BLOB NOT NULL
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS shows (
     id INTEGER PRIMARY KEY,
     film_id INTEGER NOT NULL,
-    time TEXT NOT NULL,
+    time TEXT NOT NULL UNIQUE,
     FOREIGN KEY(film_id) REFERENCES films(id) ON DELETE CASCADE
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY,
     show_id INTEGER NOT NULL,
-    amount INTEGER NOT NULL DEFAULT 0 CHECK(amount >= 0),
     price INTEGER NOT NULL DEFAULT 0 CHECK(price >= 0),
+    place INTEGER NOT NULL CHECK(place >= 0 AND place < 20),
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
 ) STRICT;
 
@@ -100,7 +101,7 @@ class Database:
     def get_new_check_id(self):
         result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
         return 1 if not result else result
-    
+
     def sell_product(self):
         pass
 
@@ -109,18 +110,23 @@ class Database:
 
     def return_check(self):
         pass
-    
+
     def return_product(self):
         pass
 
-    def add_film(self):
-        pass
+    def add_film(self, name, year, minutes, description, image_data):
+        self._cur.execute(
+            "INSERT INTO films VALUES (NULL, ?, ?, ?, ?, ?)",
+            (name, year, minutes, description, image_data),
+        )
 
     def add_show(self):
         pass
 
     def get_film_stats(self):
         pass
+
+
 """
     def add_product(self, *args):
         _check_args(5, args)

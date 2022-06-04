@@ -4,8 +4,8 @@ import sys
 import admin
 import cashier
 import logo
-import util
 import style
+import util
 import window
 from db_sqlite import Database
 from login import Login, Roles
@@ -13,7 +13,7 @@ from login import Login, Roles
 
 class MainWindow(window.RootWindow):
     def __init__(self):
-        super().__init__("Cinnabon")
+        super().__init__("Кинотеатр")
         logo.create_image()
         style.init_style()
         self._db = Database()

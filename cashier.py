@@ -4,7 +4,6 @@ import tkinter.ttk as _ttk
 import logo
 import util
 from db_sqlite import Database
-from hint import Hint
 from login import Login, Roles
 from style import Button, Entry
 from tableview import TableView
@@ -41,80 +40,76 @@ class Cashier(Window):
         self._check_text.grid(column=1, row=0)
         self._update_check_id()
 
-        return frame
+        cols = ["ID", "ID сеанса", "Количество", "Цена"]
+        self._tickets = TableView(
+            frame, self._db, "tickets", cols, self._on_ticket_select
+        )
+        self._tickets.grid(column=0, row=1, sticky="nsew", padx=20)
+        self._tickets.update_data()
 
-    def _create_returns(self, master):
-        frame = _ttk.Frame(master)
-        return frame
+        entries = _ttk.Frame(frame)
+        self._create_entries(entries)
+        entries.grid(column=0, row=2)
 
-    def create_widgets_old(self):
-
-        goods_cols = [
-            "Штрихкод",
-            "Наименование",
-            "Производитель",
-            "Количество",
-            "Цена",
-        ]
-        self.goods = TableView(main, self.db, "goods", goods_cols, self.on_good_select)
-        self.goods.grid(column=0, row=1, sticky="nsew", padx=20)
-        self.goods.update_data()
-
-        entries_frame = _ttk.Frame(main)
-        self.create_entries(entries_frame)
-        entries_frame.grid(column=0, row=2)
-
-        self.check = TableView(main, columns=["Штрихкод", "Количество", "Стоимость"])
+        self.check = TableView(frame, columns=["Штрихкод", "Количество", "Стоимость"])
         self.check.grid(column=1, row=1, sticky="nsew", padx=20)
 
-        check_frame = _ttk.Frame(main)
-        check_frame.grid(column=1, row=2)
+        check_items = _ttk.Frame(frame)
+        self._create_check_items(check_items)
+        check_items.grid(column=1, row=2)
 
-        self.create_confirm_window()
+        return frame
 
-        self.check_sum = 0
-        self.sum_label = _ttk.Label(check_frame, text="Сумма: 0")
-        self.sum_label.pack(pady=5)
-        Button(check_frame, text="Продать", command=self.on_sell).pack(pady=5)
-        Button(check_frame, text="Вернуть", command=self.on_return).pack(pady=5)
-
-    def create_entries(self, master):
-        _ttk.Label(master, text="Штрихкод").grid(column=0, row=0, padx=5)
+    def _create_entries(self, master):
+        _ttk.Label(master, text="ID").grid(column=0, row=0, padx=5)
         _ttk.Label(master, text="Количество").grid(column=0, row=1, padx=5)
 
-        self.code = Entry(master)
-        self.code.grid(column=1, row=0, padx=5, pady=5)
-        self.amount = Entry(master)
-        self.amount.grid(column=1, row=1, padx=5, pady=5)
+        self._code = Entry(master)
+        self._code.grid(column=1, row=0, padx=5, pady=5)
+        self._amount = Entry(master)
+        self._amount.grid(column=1, row=1, padx=5, pady=5)
 
-        self.add = Button(master, text="Добавить", command=self.on_add_item)
-        self.add.grid(column=0, row=2, columnspan=2, pady=5)
+        add = Button(master, text="Добавить", command=self.on_add_item)
+        add.grid(column=0, row=2, columnspan=2, pady=5)
 
-        self.code.bind("<Return>", lambda _: self.add.invoke())
-        self.amount.bind("<Return>", lambda _: self.add.invoke())
+        self._code.bind("<Return>", lambda _: add.invoke())
+        self._amount.bind("<Return>", lambda _: add.invoke())
 
-    def create_confirm_window(self):
-        self.confirm_window = _tk.Toplevel(self)
-        self.confirm_window.overrideredirect(True)
-        self.confirm_return = Login(
-            self.confirm_window,
+    def _create_check_items(self, master):
+        self._create_confirm_window()
+
+        self._check_sum = 0
+        self._sum_label = _ttk.Label(master, text="Сумма: 0")
+        self._sum_label.pack(pady=5)
+        Button(master, text="Продать", command=self.on_sell).pack(pady=5)
+        Button(master, text="Вернуть", command=self.on_return).pack(pady=5)
+
+    def _create_confirm_window(self):
+        self._confirm_window = _tk.Toplevel(self)
+        self._confirm_window.overrideredirect(True)
+        Login(
+            self._confirm_window,
             [
                 (
                     "Подтвердить",
                     lambda l, p: Login.check_credentials(l, p, self.check_return),
                 )
             ],
-        )
-        self.confirm_return.pack()
-        self.confirm_window.withdraw()
+        ).pack()
+        self._confirm_window.withdraw()
 
-    def find_row(self, table, code):
+    def _create_returns(self, master):
+        frame = _ttk.Frame(master)
+        return frame
+
+    def _find_row(self, table, code):
         for row in table.get_children():
             if int(code) == table.item(row)["values"][0]:
                 return row, table.item(row)["values"]
         return None, None
 
-    def on_good_select(self, _, selected):
+    def _on_ticket_select(self, _, selected):
+        return
         self.code.delete(0, "end")
         self.amount.delete(0, "end")
         self.code.insert(0, selected["values"][0])

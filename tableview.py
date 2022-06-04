@@ -2,11 +2,20 @@ import tkinter.ttk as _ttk
 
 
 class TableView(_ttk.Treeview):
-    def __init__(self, master=None, db=None, table=None, columns=None, on_select=None):
+    def __init__(
+        self,
+        master=None,
+        db=None,
+        table=None,
+        columns=None,
+        on_select=None,
+        row_func=None,
+    ):
         super().__init__(master)
 
         self.db = db
         self.table = table
+        self._row_func = row_func
 
         self.config(columns=columns)
 
@@ -33,6 +42,8 @@ class TableView(_ttk.Treeview):
 
         for row in self.db.get_table(self.table):
             row = tuple(str(x) for x in row)
+            if self._row_func is not None:
+                row = self._row_func(row)
             self.insert("", "end", values=row)
 
     def on_select(self, event, func):
