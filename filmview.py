@@ -1,3 +1,4 @@
+import functools as _ft
 import io as _io
 import tkinter.ttk as _ttk
 
@@ -12,6 +13,9 @@ class FilmView(_ttk.Frame):
     def __init__(self, master=None, db=None, on_click=None):
         super().__init__(master)
         self._db = db
+        self._on_click = on_click
+        self.images, self.buttons = [], []
+
         self.update()
 
     def _clear_children(self):
@@ -20,6 +24,8 @@ class FilmView(_ttk.Frame):
 
     def update(self):
         self._clear_children()
+        self.images.clear()
+        self.buttons.clear()
 
         films = self._db.get_table("films")
         if len(films) == 0:
@@ -27,12 +33,12 @@ class FilmView(_ttk.Frame):
             return
 
         row, column = 0, 0
-        self.images = []
-        self.buttons = []
-
         for film in films:
             image = images.get_photo_image(film[-1])
-            btn = style.Button(self, image=image)
+            btn = style.Button(
+                self, image=image, command=_ft.partial(self._on_click, film[0])
+            )
+            btn.config(pad="1m")
             btn.grid(column=column, row=row)
             column += 1
             if column >= _columns:

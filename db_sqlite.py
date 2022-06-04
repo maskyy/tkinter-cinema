@@ -115,10 +115,15 @@ class Database:
         pass
 
     def add_film(self, name, year, minutes, description, image_data):
-        self._cur.execute(
-            "INSERT INTO films VALUES (NULL, ?, ?, ?, ?, ?)",
-            (name, year, minutes, description, image_data),
-        )
+        try:
+            self._cur.execute(
+                "INSERT INTO films VALUES (NULL, ?, ?, ?, ?, ?)",
+                (name, year, minutes, description, image_data),
+            )
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     def add_show(self):
         pass

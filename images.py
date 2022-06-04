@@ -3,7 +3,7 @@ import PIL.Image as _image
 import PIL.ImageTk as _imageTk
 
 __all__ = ["is_image", "create_thumbnail", "get_photo_image"]
-_thumbnail_height = 100
+_thumbnail_height = 350
 
 
 def is_image(filename):

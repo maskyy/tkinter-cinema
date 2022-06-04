@@ -22,14 +22,6 @@ class Admin(window.Window):
     def __init__(self):
         super().__init__("Панель администратора")
         self._db = Database()
-        self._goods_cols = [
-            "Штрихкод",
-            "Наименование",
-            "Производитель",
-            "Количество",
-            "Цена",
-        ]
-
         self._create_widgets()
 
     def _create_widgets(self):
@@ -53,13 +45,15 @@ class Admin(window.Window):
 
     def _create_films(self, master):
         frame = _ttk.Frame(master)
-        self._film_view = filmview.FilmView(frame, self._db)
-        self._film_view.pack()
+        frame.grid_columnconfigure(0, weight=2)
+        frame.grid_columnconfigure(1, weight=1)
+
+        self._film_view = filmview.FilmView(frame, self._db, self._on_film_select)
+        self._film_view.grid(column=0, row=0)
 
         add_film = self._create_add_film_frame(frame)
-        style.Button(
-            frame, text="Добавить фильм", command=lambda: self._toggle_pack(add_film)
-        ).pack()
+        add_film.grid(column=1, row=0)
+
         return frame
 
     def _create_add_film_frame(self, master):
@@ -77,7 +71,7 @@ class Admin(window.Window):
         style.Button(frame, text="Обзор...", command=self._select_image).grid(
             column=0, row=len(widgets) + 1, columnspan=2, padx=5, pady=5
         )
-        style.Button(frame, text="Добавить", command=self._add_film).grid(
+        style.Button(frame, text="Добавить фильм", command=self._add_film).grid(
             column=0, row=len(widgets) + 2, columnspan=2, padx=5, pady=5
         )
 
@@ -90,12 +84,6 @@ class Admin(window.Window):
     def _create_stats(self, master):
         frame = _ttk.Frame(master)
         return frame
-
-    def _toggle_pack(self, widget):
-        if widget.winfo_ismapped():
-            widget.pack_forget()
-        else:
-            widget.pack()
 
     def _select_image(self):
         filename = _fd.askopenfilename(filetypes=[("Картинки", ".jpg .png")])
@@ -130,3 +118,14 @@ class Admin(window.Window):
     def _add_film(self):
         if not self._validate_film_data():
             return
+
+        fields = [e.get_strip() for e in self._add_entries]
+        if not self._db.add_film(*fields[:-1], images.create_thumbnail(fields[-1])):
+            return util.show_error("Не удалось добавить фильм")
+
+        util.show_info("Фильм добавлен")
+        self._film_view.update()
+        [e.delete(0, "end") for e in self._add_entries]
+
+    def _on_film_select(self, id_):
+        _msg.askyesno("aa", id_)
