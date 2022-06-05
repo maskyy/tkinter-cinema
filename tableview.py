@@ -44,6 +44,8 @@ class TableView(_ttk.Treeview):
             row = tuple(str(x) for x in row)
             if self._row_func is not None:
                 row = self._row_func(row)
+                if not row:
+                    continue
             self.insert("", "end", values=row)
 
     def on_select(self, event, func):

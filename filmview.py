@@ -6,7 +6,7 @@ import images
 import style
 
 __all__ = ["FilmView"]
-_columns = 3
+_columns = 4
 
 
 class FilmView(_ttk.Frame):
@@ -36,7 +36,7 @@ class FilmView(_ttk.Frame):
         for film in films:
             image = images.get_photo_image(film[-1])
             btn = style.Button(
-                self, image=image, command=_ft.partial(self._on_click, film[0])
+                self, image=image, command=_ft.partial(self._on_click, film)
             )
             btn.config(pad="1m")
             btn.grid(column=column, row=row)

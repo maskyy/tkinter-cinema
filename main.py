@@ -28,7 +28,7 @@ class MainWindow(window.RootWindow):
         login_window = Login(
             self,
             [
-                ("Зарегистрироваться", Login.register),
+                # ("Зарегистрироваться", Login.register),
                 ("Войти", check_credentials),
             ],
             self._db,
@@ -42,7 +42,7 @@ class MainWindow(window.RootWindow):
         if len(sys.argv) >= 3:
             login_window.login.insert(0, sys.argv[1])
             login_window.password.insert(0, sys.argv[2])
-            login_window.buttons[1].invoke()
+            login_window.buttons[-1].invoke()
 
     def open_window(self, role):
         if role == Roles.CASHIER.value:

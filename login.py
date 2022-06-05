@@ -10,7 +10,7 @@ import util
 __all__ = ["Roles", "Login"]
 
 
-def _get_hash(s):
+def hash_pwd(s):
     return _hash.sha256(s.encode()).hexdigest()
 
 
@@ -30,7 +30,7 @@ class Login(_ttk.Frame):
 
         answer = _msg.askquestion("Роль", "Да - администратор, нет - кассир")
         role = Roles.ADMIN if answer == "yes" else Roles.CASHIER
-        db.register_user(login, _get_hash(password), role.value)
+        db.register_user(login, hash_pwd(password), role.value)
         _msg.showinfo("Регистрация", "Регистрация успешна")
         return True
 
@@ -44,7 +44,7 @@ class Login(_ttk.Frame):
             return util.show_error("Логин не существует")
 
         password2, role = user_data
-        if _get_hash(password) != password2:
+        if hash_pwd(password) != password2:
             return util.show_error("Неверный пароль")
 
         handler(role)

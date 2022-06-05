@@ -3,8 +3,10 @@ import sqlite3 as _sql
 __all__ = ["Database"]
 
 _default_name = "files/cinema.sqlite3"
+_cinema_places = 20
 
-_init_script = """
+_init_script = (
+    """
 PRAGMA encoding = "UTF-8";
 PRAGMA foreign_keys = 1;
 
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY,
     show_id INTEGER NOT NULL,
     price INTEGER NOT NULL DEFAULT 0 CHECK(price >= 0),
-    place INTEGER NOT NULL CHECK(place >= 0 AND place < 20),
+    place INTEGER NOT NULL CHECK(place >= 0 AND place < %d),
     FOREIGN KEY(show_id) REFERENCES shows(id) ON DELETE CASCADE
 ) STRICT;
 
@@ -43,8 +45,7 @@ CREATE TABLE IF NOT EXISTS checks (
 CREATE TABLE IF NOT EXISTS sales (
     id INTEGER PRIMARY KEY,
     check_id INTEGER NOT NULL,
-    ticket_id INTEGER NOT NULL,
-    amount INTEGER NOT NULL DEFAULT 0 CHECK(amount > 0),
+    ticket_id INTEGER NOT NULL UNIQUE,
     cost INTEGER NOT NULL DEFAULT 0 CHECK(cost >= 0),
     FOREIGN KEY(check_id) REFERENCES checks(id) ON DELETE CASCADE,
     FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
@@ -56,6 +57,8 @@ CREATE TABLE IF NOT EXISTS logins (
     role TEXT NOT NULL DEFAULT "cashier"
 ) STRICT;
 """
+    % _cinema_places
+)
 
 _exit_script = """
 PRAGMA analysis_limit = 1000;
@@ -65,18 +68,18 @@ PRAGMA optimize;
 
 class Database:
     def __init__(self, filename=_default_name):
-        self.con = _sql.connect(filename)
-        self._cur = self.con.cursor()
+        self._con = _sql.connect(filename)
+        self._cur = self._con.cursor()
         self._cur.executescript(_init_script)
 
     def __del__(self):
         self._cur.executescript(_exit_script)
         self._cur.close()
         self.save()
-        self.con.close()
+        self._con.close()
 
     def save(self):
-        self.con.commit()
+        self._con.commit()
 
     def get_table(self, name):
         return self._cur.execute("SELECT * FROM %s" % name).fetchall()
@@ -97,22 +100,47 @@ class Database:
         self._cur.execute(
             "INSERT INTO logins VALUES (?, ?, ?)", (login, password, role)
         )
+        self.save()
+
+    def change_user_password(self, login, new_password):
+        self._cur.execute(
+            "UPDATE logins SET password = ? WHERE login = ?", (new_password, login)
+        )
+        self.save()
 
     def get_new_check_id(self):
         result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
         return 1 if not result else result
 
-    def sell_product(self):
-        pass
+    def sell_ticket(self, check_id, ticket_id, cost):
+        self._cur.execute(
+            "INSERT INTO sales VALUES (NULL, ?, ?, ?)", (check_id, ticket_id, cost)
+        )
 
-    def add_check(self):
-        pass
+    def add_check(self, id_, sum_):
+        self._cur.execute("INSERT INTO checks VALUES (?, ?)", (id_, sum_))
 
-    def return_check(self):
-        pass
+    def return_check(self, id_):
+        self._cur.execute("DELETE FROM checks WHERE id = ?", (id_,))
 
-    def return_product(self):
-        pass
+    def get_ticket_name(self, ticket_id):
+        self._cur.execute(
+            "SELECT show_id, place FROM tickets WHERE id = ?", (ticket_id,)
+        )
+        show_id, place = self._cur.fetchone()
+        self._cur.execute("SELECT film_id, time FROM shows WHERE id = ?", (show_id,))
+        film_id, time = self._cur.fetchone()
+        self._cur.execute("SELECT name FROM films WHERE id = ?", (film_id,))
+        (name,) = self._cur.fetchone()
+        return "%s (%s, м. %d)" % (name, time, place)
+
+    def sell_ticket(self, check_id, ticket_id, cost):
+        self._cur.execute(
+            "INSERT INTO sales VALUES (NULL, ?, ?, ?)", (check_id, ticket_id, cost)
+        )
+
+    def return_ticket(self, id_):
+        self._cur.execute("DELETE FROM sales WHERE ticket_id = ?", (id_,))
 
     def add_film(self, name, year, minutes, description, image_data):
         try:
@@ -121,14 +149,45 @@ class Database:
                 (name, year, minutes, description, image_data),
             )
             return True
+        except:
+            return False
+
+    def update_film(self, id_, name, year, minutes, description, image_data=None):
+        args = (name, year, minutes, description)
+        update_str = "name = ?, year = ?, duration_min = ?, description = ?"
+        if image_data is not None:
+            args += (image_data,)
+            update_str += ", image = ?"
+
+        try:
+            self._cur.execute(
+                "UPDATE films SET %s WHERE id = ?" % update_str, args + (id_,)
+            )
+            self.save()
+            return True
         except Exception as e:
             print(e)
             return False
 
-    def add_show(self):
-        pass
+    def delete_film(self, id_):
+        self._cur.execute("DELETE FROM films WHERE id = ?", (id_,))
 
-    def get_film_stats(self):
+    def add_show(self, film_id, time, price):
+        self._cur.execute("INSERT INTO shows VALUES (NULL, ?, ?)", (film_id, time))
+        show_id = self._cur.execute("SELECT last_insert_rowid()").fetchone()[0]
+        for i in range(_cinema_places):
+            self.add_ticket(show_id, price, i)
+        return _cinema_places
+
+    def add_ticket(self, show_id, price, place):
+        self._cur.execute(
+            "INSERT INTO tickets VALUES (NULL, ?, ?, ?)", (show_id, price, place)
+        )
+
+    def delete_show(self, id_):
+        self._cur.execute("DELETE FROM shows WHERE id = ?", (id_,))
+
+    def get_sale_stats(self):
         pass
 
 
