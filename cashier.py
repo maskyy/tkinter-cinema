@@ -18,7 +18,7 @@ __all__ = ["Cashier"]
 
 class Cashier(Window):
     def __init__(self):
-        super().__init__("Касса")
+        super().__init__("Продажа билетов")
         self._db = Database()
         self._show_selector = self._ticket_selector = None
         self._tickets_to_sell = []
@@ -44,6 +44,10 @@ class Cashier(Window):
 
         self._film_view = filmview.FilmView(frame, self._db, self._on_film_select)
         self._film_view.grid(column=0, row=1)
+        self._reset_search()
+
+        search = self._create_search(frame)
+        search.grid(column=0, row=2)
 
         self._check_text = _ttk.Label(frame)
         self._check_text.grid(column=1, row=0)
@@ -58,6 +62,26 @@ class Cashier(Window):
         check_items = _ttk.Frame(frame)
         self._create_check_items(check_items)
         check_items.grid(column=1, row=2)
+
+        return frame
+
+    def _create_search(self, master):
+        frame = _ttk.Frame(master)
+
+        _ttk.Label(frame, text="Название").grid(column=0, row=0, padx=5)
+        self._film_name = style.Entry(frame)
+        self._film_name.grid(column=1, row=0, pady=5)
+
+        _ttk.Label(frame, text="Время сеанса").grid(column=0, row=1, padx=5)
+        self._show_time = style.Entry(frame)
+        self._show_time.grid(column=1, row=1, pady=5)
+
+        style.Button(frame, text="Поиск", command=self._on_search).grid(
+            column=0, row=2, columnspan=2, pady=5
+        )
+        style.Button(frame, text="Сбросить", command=self._reset_search).grid(
+            column=0, row=3, columnspan=2, pady=5
+        )
 
         return frame
 
@@ -136,7 +160,7 @@ class Cashier(Window):
             self._show_selector = None
 
     def _filter_shows(self, row):
-        if int(row[1]) == self._film_id:
+        if int(row[1]) == self._film_id and self._time in row[2]:
             return row
         return None
 
@@ -296,3 +320,21 @@ class Cashier(Window):
     def _update_sales(self):
         self._checks.update_data()
         self._sales.update_data()
+
+    def _on_search(self):
+        self._name2 = self._film_name.get_strip()
+        self._time = self._show_time.get_strip()
+        self._film_view.update(self._filter_films)
+
+    def _reset_search(self):
+        if hasattr(self, "_film_name"):
+            self._film_name.delete(0, "end")
+            self._show_time.delete(0, "end")
+
+        self._name2, self._time = "", ""
+        self._film_view.update(self._filter_films)
+
+    def _filter_films(self, film):
+        if not self._db.get_film_shows(film[0], self._time):
+            return False
+        return self._name2.lower() in film[1].lower()

@@ -162,7 +162,9 @@ class Database:
         self._cur.execute("SELECT check_id, cost FROM sales WHERE id = ?", (id_,))
         check_id, cost = self._cur.fetchone()
         self._cur.execute("DELETE FROM sales WHERE id = ?", (id_,))
-        self._cur.execute("UPDATE checks SET sum = sum - ? WHERE id = ?", (cost, check_id))
+        self._cur.execute(
+            "UPDATE checks SET sum = sum - ? WHERE id = ?", (cost, check_id)
+        )
 
     def add_film(self, name, year, minutes, description, image_data):
         try:
@@ -208,6 +210,13 @@ class Database:
 
     def delete_show(self, id_):
         self._cur.execute("DELETE FROM shows WHERE id = ?", (id_,))
+
+    def get_film_shows(self, id_, time):
+        time = "%%%s%%" % time
+        self._cur.execute(
+            "SELECT * FROM shows WHERE film_id = ? AND time LIKE ?", (id_, time)
+        )
+        return self._cur.fetchall()
 
 
 """

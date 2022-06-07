@@ -22,6 +22,9 @@ class FilmView(_ttk.Frame):
         widgets = [w for w in self.children.values()]
         [w.destroy() for w in widgets]
 
+    def _add_label(self):
+        _ttk.Label(self, text="Фильмы не найдены...").grid(column=0, row=0)
+
     def update(self, filter=None):
         self._clear_children()
         self.images.clear()
@@ -29,7 +32,7 @@ class FilmView(_ttk.Frame):
 
         films = self._db.get_table("films")
         if len(films) == 0:
-            _ttk.Label(self, text="Фильмы не найдены...").grid(column=0, row=0)
+            self._add_label()
             return
 
         row, column = 0, 0
@@ -51,5 +54,5 @@ class FilmView(_ttk.Frame):
             self.images.append(image)
             self.buttons.append(btn)
 
-    def search(self, filter):
-        self.update(filter)
+        if column == 0:  # no films were added
+            self._add_label()

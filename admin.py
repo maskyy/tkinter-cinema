@@ -155,13 +155,13 @@ class Admin(window.Window):
         self._logins.update_data()
         self._logins.grid(column=0, row=0, rowspan=4)
 
-        _ttk.Label(frame, text="Логин").grid(column=1, row=0)
-        _ttk.Label(frame, text="Пароль").grid(column=1, row=1)
+        _ttk.Label(frame, text="Логин").grid(column=1, row=0, padx=5)
+        _ttk.Label(frame, text="Пароль").grid(column=1, row=1, padx=5)
 
         self._login = style.Entry(frame)
-        self._login.grid(column=2, row=0)
+        self._login.grid(column=2, row=0, pady=5)
         self._password = style.Entry(frame)
-        self._password.grid(column=2, row=1)
+        self._password.grid(column=2, row=1, pady=5)
 
         style.Button(frame, text="Добавить", command=self._add_cashier).grid(
             column=1, row=2, columnspan=2
