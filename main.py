@@ -36,7 +36,7 @@ class MainWindow(window.RootWindow):
         login_window.pack()
         login_window.login.focus()
         login_window.password.bind(
-            "<Return>", lambda _: login_window.buttons[1].invoke()
+            "<Return>", lambda _: login_window.buttons[-1].invoke()
         )
 
         if len(sys.argv) >= 3:
