@@ -22,7 +22,7 @@ class FilmView(_ttk.Frame):
         widgets = [w for w in self.children.values()]
         [w.destroy() for w in widgets]
 
-    def update(self):
+    def update(self, filter=None):
         self._clear_children()
         self.images.clear()
         self.buttons.clear()
@@ -34,6 +34,9 @@ class FilmView(_ttk.Frame):
 
         row, column = 0, 0
         for film in films:
+            if callable(filter) and not filter(film):
+                continue
+
             image = images.get_photo_image(film[-1])
             btn = style.Button(
                 self, image=image, command=_ft.partial(self._on_click, film)
@@ -47,3 +50,6 @@ class FilmView(_ttk.Frame):
 
             self.images.append(image)
             self.buttons.append(btn)
+
+    def search(self, filter):
+        self.update(filter)

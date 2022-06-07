@@ -7,8 +7,8 @@ import tkinter.ttk as _ttk
 import dates
 import filmview
 import images
-import logo
 import login
+import logo
 import style
 import util
 import window

@@ -1,11 +1,13 @@
+import functools as _ft
 import tkinter as _tk
 import tkinter.ttk as _ttk
 
+import filmview
+import login
 import logo
+import style
 import util
 from db_sqlite import Database
-from login import Login, Roles
-from style import Button, Entry
 from tableview import TableView
 from tabs import Tabs
 from window import Window
@@ -17,6 +19,10 @@ class Cashier(Window):
     def __init__(self):
         super().__init__("Касса")
         self._db = Database()
+        self._show_selector = self._ticket_selector = None
+        self._tickets_to_sell = []
+        self._sold_tickets = self._db.get_sold_tickets()
+
         self._create_widgets()
 
     def _create_widgets(self):
@@ -31,28 +37,22 @@ class Cashier(Window):
 
     def _create_main(self, master):
         frame = _ttk.Frame(master)
-        frame.grid_columnconfigure(0, weight=2)
-        frame.grid_columnconfigure(1, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=2)
         frame.grid_rowconfigure(1, weight=1)
 
-        _ttk.Label(frame, text="Билеты").grid(column=0, row=0)
+        self._film_view = filmview.FilmView(frame, self._db, self._on_film_select)
+        self._film_view.grid(column=0, row=1)
+
         self._check_text = _ttk.Label(frame)
         self._check_text.grid(column=1, row=0)
         self._update_check_id()
 
-        cols = ["ID", "ID сеанса", "Количество", "Цена"]
-        self._tickets = TableView(
-            frame, self._db, "tickets", cols, self._on_ticket_select
-        )
-        self._tickets.grid(column=0, row=1, sticky="nsew", padx=20)
-        self._tickets.update_data()
-
-        entries = _ttk.Frame(frame)
-        self._create_entries(entries)
-        entries.grid(column=0, row=2)
-
-        self.check = TableView(frame, columns=["Штрихкод", "Количество", "Стоимость"])
-        self.check.grid(column=1, row=1, sticky="nsew", padx=20)
+        self._check = TableView(frame, columns=["ID", "Билет", "Стоимость"])
+        self._check.config(displaycolumns=["Билет", "Стоимость"])
+        self._check.column("#1", width=300)
+        self._check.column("#2", width=1)
+        self._check.grid(column=1, row=1, sticky="nsew", padx=20)
 
         check_items = _ttk.Frame(frame)
         self._create_check_items(check_items)
@@ -60,39 +60,24 @@ class Cashier(Window):
 
         return frame
 
-    def _create_entries(self, master):
-        _ttk.Label(master, text="ID").grid(column=0, row=0, padx=5)
-        _ttk.Label(master, text="Количество").grid(column=0, row=1, padx=5)
-
-        self._code = Entry(master)
-        self._code.grid(column=1, row=0, padx=5, pady=5)
-        self._amount = Entry(master)
-        self._amount.grid(column=1, row=1, padx=5, pady=5)
-
-        add = Button(master, text="Добавить", command=self.on_add_item)
-        add.grid(column=0, row=2, columnspan=2, pady=5)
-
-        self._code.bind("<Return>", lambda _: add.invoke())
-        self._amount.bind("<Return>", lambda _: add.invoke())
-
     def _create_check_items(self, master):
         self._create_confirm_window()
 
         self._check_sum = 0
         self._sum_label = _ttk.Label(master, text="Сумма: 0")
         self._sum_label.pack(pady=5)
-        Button(master, text="Продать", command=self.on_sell).pack(pady=5)
-        Button(master, text="Вернуть", command=self.on_return).pack(pady=5)
+        style.Button(master, text="Продать", command=self.on_sell).pack(pady=5)
+        style.Button(master, text="Вернуть", command=self.on_return).pack(pady=5)
 
     def _create_confirm_window(self):
         self._confirm_window = _tk.Toplevel(self)
         self._confirm_window.overrideredirect(True)
-        Login(
+        login.Login(
             self._confirm_window,
             [
                 (
                     "Подтвердить",
-                    lambda l, p: Login.check_credentials(l, p, self.check_return),
+                    lambda l, p: Login.check_credentials(l, p, self._check_return),
                 )
             ],
         ).pack()
@@ -102,69 +87,116 @@ class Cashier(Window):
         frame = _ttk.Frame(master)
         return frame
 
+    def _on_film_select(self, data):
+        self._close_show_selector()
+        self._close_ticket_selector()
+
+        self._film_id = data[0]
+        self._show_selector = win = _tk.Toplevel(self)
+        win.title("Выбор сеанса")
+
+        _ttk.Label(win, text=data[1]).pack()
+        columns = ["ID", "film_id", "Время"]
+        self._shows = TableView(
+            win, self._db, "shows", columns, self._select_ticket, self._filter_shows
+        )
+        self._shows.config(displaycolumns="Время")
+        self._shows.column("#1", width=180)
+        self._shows.update_data()
+        self._shows.pack()
+
+        if len(self._shows.get_children()) == 0:
+            util.show_error("У выбранного фильма нет сеансов")
+            self._close_show_selector()
+
+    def _close_show_selector(self):
+        if self._show_selector is not None:
+            self._show_selector.destroy()
+            self._show_selector = None
+
+    def _filter_shows(self, row):
+        if int(row[1]) == self._film_id:
+            return row
+        return None
+
+    def _select_ticket(self, _, selected):
+        self._close_show_selector()
+        self._close_ticket_selector()
+
+        self._show_id = selected["values"][0]
+
+        self._ticket_selector = win = _tk.Toplevel(self)
+        self._ticket_selector.title("Выбор билета")
+
+        _ttk.Label(win, text="Сеанс в " + selected["values"][2]).pack()
+        tickets = self._create_ticket_buttons(win)
+        tickets.pack()
+
+    def _create_ticket_buttons(self, master):
+        frame = _ttk.Frame(master)
+
+        column, row = 0, 0
+        for id_, price, place in self._db.get_show_tickets(self._show_id):
+            btn = style.Button(frame, text="м. %d, %d р." % (place, price))
+            btn.config(
+                pad="1m", command=_ft.partial(self._add_ticket, id_, price, place)
+            )
+            btn.grid(column=column, row=row)
+
+            if self._is_sold(id_):
+                btn.config(state="disabled")
+
+            column += 1
+            if column >= 5:
+                column = 0
+                row += 1
+
+        return frame
+
+    def _filter_tickets(self, row):
+        if int(row[1]) == self._show_id:
+            return row
+        return None
+
+    def _close_ticket_selector(self):
+        if self._ticket_selector is not None:
+            self._ticket_selector.destroy()
+            self._ticket_selector = None
+
+    def _is_sold(self, id_):
+        return id_ in self._tickets_to_sell or id_ in self._sold_tickets
+
+    def _add_ticket(self, id_, price, place):
+        self._close_ticket_selector()
+
+        self._tickets_to_sell.append(id_)
+        name = self._db.get_ticket_name(id_)
+        self._check.insert("", "end", values=(id_, name, price))
+
     def _find_row(self, table, code):
         for row in table.get_children():
             if int(code) == table.item(row)["values"][0]:
                 return row, table.item(row)["values"]
         return None, None
 
-    def _on_ticket_select(self, _, selected):
-        return
-        self.code.delete(0, "end")
-        self.amount.delete(0, "end")
-        self.code.insert(0, selected["values"][0])
-        self.amount.insert(0, 1)
-        self.code.focus()
-
-    def on_add_item(self):
-        code, amount = self.code.get_strip(), self.amount.get_strip()
-        if not code or len(code) != 13 or not code.isdigit():
-            return util.show_error("Введите штрихкод из 13 цифр")
-
-        row, values = self.find_row(self.goods, code)
-
-        if not row:
-            return util.show_error("Штрихкод не найден")
-        if not amount.isdigit() or int(amount) <= 0:
-            return util.show_error("Количество должно быть целым положительным числом")
-        amount = int(amount)
-        if amount > values[3]:
-            return util.show_error("Нельзя продать больше товаров, чем есть в наличии")
-
-        self.change_by_amount(-amount, row)
-        self.add_to_check(code, amount, row)
-        self.update_check_sum()
-
-        self.code.delete(0, "end")
-        self.amount.delete(0, "end")
-
-    def change_by_amount(self, amount, row):
-        values = self.goods.item(row)["values"]
-        values[3] += amount
-        self.goods.item(row, values=values)
-
-    def add_to_check(self, code, amount, row):
-        cost = amount * self.goods.item(row)["values"][4]
-        self.check.insert("", "end", values=(code, amount, cost))
-
     def on_sell(self):
-        if len(self.check.get_children()) == 0:
+        if len(self._check.get_children()) == 0:
             return util.show_error("В чеке нет товаров")
 
-        self.db.add_check(self.check_id, self.check_sum)
-        for row in self.check.get_children():
-            data = (self.check_id, *self.check.item(row)["values"])
-            self.db.sell_product(*data)
+        self._db.add_check(self._check_id, self._check_sum)
+        for row in self._check.get_children():
+            data = (self._check_id, *self._check.item(row)["values"])
+            self._db.sell_product(*data)
 
-        self.check.clear()
-        self.db.save()
+        self._check.clear()
+        self._db.save()
 
-        util.show_info("Чек №%d на сумму %d" % (self.check_id, self.check_sum))
-        self.update_check_id()
-        self.update_check_sum()
+        util.show_info("Чек №%d на сумму %d" % (self._check_id, self._check_sum))
+        self._update_check_id()
+        self._update_check_sum()
 
     def check_return(self, role):
-        if role != Roles.ADMIN:
+        if role != login.Roles.ADMIN:
             return util.show_error("Введите логин и пароль администратора")
         self.do_return()
         self.confirm_window.withdraw()
@@ -173,30 +205,30 @@ class Cashier(Window):
         if self.confirm_window.winfo_ismapped():
             self.confirm_window.withdraw()
             return
-        if not self.check.selection():
-            return util.show_error("Выберите товары для возврата")
+        if not self._check.selection():
+            return util.show_error("Выберите билеты для возврата")
         self.confirm_window.deiconify()
         util.center_window(self.confirm_window)
 
     def do_return(self):
-        if not self.check.selection():
-            return util.show_error("Выберите товары для возврата")
+        if not self._check.selection():
+            return util.show_error("Выберите билеты для возврата")
 
-        for row in self.check.selection():
-            values = self.check.item(row)["values"]
+        for row in self._check.selection():
+            values = self._check.item(row)["values"]
             goods_row, _ = self.find_row(self.goods, values[0])
             self.change_by_amount(values[1], goods_row)
-            self.check.delete(row)
+            self._check.delete(row)
 
-        self.update_check_sum()
+        self._update_check_sum()
 
     def _update_check_id(self):
         self._check_id = self._db.get_new_check_id()
         self._check_text.config(text="Чек №%d" % self._check_id)
 
-    def update_check_sum(self):
+    def _update_check_sum(self):
         result = 0
-        for row in self.check.get_children():
-            result += self.check.item(row)["values"][2]
-        self.check_sum = result
-        self.sum_label.config(text="Сумма: %d" % self.check_sum)
+        for row in self._check.get_children():
+            result += self._check.item(row)["values"][1]
+        self._check_sum = result
+        self.sum_label.config(text="Сумма: %d" % self._check_sum)

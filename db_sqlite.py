@@ -112,6 +112,16 @@ class Database:
         result = self._cur.execute("SELECT MAX(id)+1 FROM checks").fetchone()[0]
         return 1 if not result else result
 
+    def get_show_tickets(self, show_id):
+        self._cur.execute(
+            "SELECT id, price, place FROM tickets WHERE show_id = ?", (show_id,)
+        )
+        return self._cur.fetchall()
+
+    def get_sold_tickets(self):
+        self._cur.execute("SELECT ticket_id FROM sales")
+        return self._cur.fetchall()
+
     def sell_ticket(self, check_id, ticket_id, cost):
         self._cur.execute(
             "INSERT INTO sales VALUES (NULL, ?, ?, ?)", (check_id, ticket_id, cost)
