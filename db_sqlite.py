@@ -56,6 +56,15 @@ CREATE TABLE IF NOT EXISTS logins (
     password TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT "cashier"
 ) STRICT;
+
+CREATE VIEW IF NOT EXISTS stats AS
+SELECT films.id as id, films.name as name, COUNT(ticket_id) as tickets, SUM(cost) as profit
+FROM sales
+INNER JOIN tickets ON sales.ticket_id = tickets.id
+INNER JOIN shows ON tickets.show_id = shows.id
+INNER JOIN films ON shows.film_id = films.id
+GROUP BY films.id
+ORDER BY profit DESC;
 """
     % _cinema_places
 )
@@ -149,8 +158,11 @@ class Database:
             "INSERT INTO sales VALUES (NULL, ?, ?, ?)", (check_id, ticket_id, cost)
         )
 
-    def return_ticket(self, id_):
-        self._cur.execute("DELETE FROM sales WHERE ticket_id = ?", (id_,))
+    def return_sale(self, id_):
+        self._cur.execute("SELECT check_id, cost FROM sales WHERE id = ?", (id_,))
+        check_id, cost = self._cur.fetchone()
+        self._cur.execute("DELETE FROM sales WHERE id = ?", (id_,))
+        self._cur.execute("UPDATE checks SET sum = sum - ? WHERE id = ?", (cost, check_id))
 
     def add_film(self, name, year, minutes, description, image_data):
         try:
@@ -196,9 +208,6 @@ class Database:
 
     def delete_show(self, id_):
         self._cur.execute("DELETE FROM shows WHERE id = ?", (id_,))
-
-    def get_sale_stats(self):
-        pass
 
 
 """

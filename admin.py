@@ -173,6 +173,13 @@ class Admin(window.Window):
 
     def _create_stats(self, master):
         frame = _ttk.Frame(master)
+
+        columns = ["ID", "Название", "Билетов продано", "Прибыль"]
+        stats = TableView(frame, self._db, "stats", columns)
+        stats.config(displaycolumns=[x for x in columns if x != "ID"])
+        stats.pack(expand=True, fill="both", padx=5, pady=5)
+        stats.update_data()
+
         return frame
 
     def _select_image(self, entry):
