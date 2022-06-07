@@ -54,5 +54,5 @@ class FilmView(_ttk.Frame):
             self.images.append(image)
             self.buttons.append(btn)
 
-        if column == 0:  # no films were added
+        if column == 0 and row == 0:  # no films were added
             self._add_label()
